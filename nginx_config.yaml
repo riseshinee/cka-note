@@ -1,0 +1,60 @@
+# ============================================================
+# TASK:
+# There is an existing deployment called nginx-static in the
+# nginx-static namespace. The deployment contains a ConfigMap
+# named nginx-config that supports TLSv1.3
+#
+# Update the nginx-config ConfigMap to allow TLSv1.2 connections.
+# Re-create, restart, or scale resources as necessary.
+#
+# Test command:
+# curl -k --tls-max 1.2 https://web.k8s.local:30007
+# ============================================================
+#
+# SOLUTION:
+#
+# 1. ConfigMap 수정
+#    ssl_protocols 에 TLSv1.2 를 추가한다.
+#    변경 전: ssl_protocols TLSv1.3;
+#    변경 후: ssl_protocols TLSv1.3 TLSv1.2;
+#
+#    kubectl apply -f nginx-config.yaml
+#
+# 2. Pod 재시작
+#    Deployment 재시작 명령:
+#    kubectl rollout restart -n nginx-static deploy nginx-static
+#
+#    혹은 Pod만 삭제 (pod가 여러 개일 경우 각각 삭제):
+#    kubectl delete -n nginx-static pod nginx-static-<tab>
+#
+# 3. Pod 확인
+#    kubectl get -n nginx-static pod
+#
+# 4. 테스트
+#    curl -k --tls-max 1.2 https://web.k8s.local:30007
+#
+# ============================================================
+# 위 작업 후 ConfigMap을 immutable 하게 만들라는 지문이 추가
+# immutable: true 필드를 추가
+# ※ immutable ConfigMap은 수정이 불가능하므로
+#    반드시 TLSv1.2 추가 작업을 먼저 완료한 후 적용
+# ==========================================#==================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: nginx-static
+immutable: true # 추가
+data:
+  nginx.conf: |
+    events {}
+    http {
+      server {
+        listen 443 ssl;
+        ssl_certificate /etc/nginx/ssl/tls.crt;
+        ssl_certificate_key /etc/nginx/ssl/tls.key;
+        ssl_protocols TLSv1.3 TLSv1.2;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+      }
+    }
