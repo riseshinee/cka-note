@@ -1,0 +1,39 @@
+# ============================================================
+# TASK 1:
+# Create a new StorageClass named low-latency that uses the
+# existing provisioner rancher.io/local-path.
+# - Set the VolumeBindingMode to WaitForFirstConsumer. (Mandatory)
+# - Make the newly created StorageClass the default StorageClass.
+# - Do NOT modify any existing Deployments or PVCs.
+# ============================================================
+#
+# SOLUTION:
+#
+# 1. 기존 default StorageClass annotation 해제 (있는 경우)
+#    kubectl patch storageclass <기존-default-name> \
+#      -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+#
+# 2. 아래 YAML 적용
+#    kubectl apply -f cka-task1-storageclass.yaml
+#
+# 3. 핵심 포인트
+#    - volumeBindingMode: WaitForFirstConsumer  ← 필수 (감점 항목)
+#    - is-default-class: "true"                ← default 지정
+#    - 기존 default가 있으면 반드시 먼저 해제   ← 두 개의 default 방지
+#
+# 4. 확인
+#    kubectl get storageclass
+#    # NAME                    PROVISIONER             VOLUMEBINDINGMODE
+#    # low-latency (default)   rancher.io/local-path   WaitForFirstConsumer
+#
+# ============================================================
+#k apply -f -<<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: low-latency
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"   # ← default 지정
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer                    # ← 필수 (미설정 시 감점)
+#EOF
