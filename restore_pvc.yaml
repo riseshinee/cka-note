@@ -1,0 +1,68 @@
+# ============================================================
+# TASK:
+# A user accidentally deleted the MariaDB Deployment in the
+# mariadb namespace, which was configured with persistent
+# storage. Re-establish the Deployment while ensuring data is
+# preserved by reusing the available PersistentVolume.
+#
+# 조건
+# - PV는 이미 존재하며 Retain 상태로 보존되어 있음
+# - PVC 이름: mariadb / 네임스페이스: mariadb
+# - Access Mode: ReadWriteOnce / Storage: 250Mi
+# - ~/mariadb-deploy.yaml 에 PVC 이름 적용 후 배포
+# ============================================================
+#
+# SOLUTION:
+#
+# 1. PV 상태 확인
+#    kubectl get pv
+#
+# 2. PVC 생성
+#    kubectl apply -f mariadb-pvc.yaml
+#
+# 3. PV-PVC 바인딩 확인
+#    kubectl get pvc -n mariadb
+#
+# 4. Deployment 파일 수정 후 배포
+#    vi ~/mariadb-deploy.yaml
+#      → claimName: mariadb 으로 변경
+#    kubectl apply -f ~/mariadb-deploy.yaml
+#
+# 5. Pod 정상 기동 확인
+#    kubectl get pod -n mariadb
+#
+# ※ PVC storageClassName은 기존 PV의 것과 반드시 일치해야
+#    바인딩이 성공한다. (예: local-path)
+# ============================================================
+
+---
+# [풀이 1/2] PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb
+  namespace: mariadb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 250Mi
+  storageClassName: local-path   # ← 기존 PV의 storageClassName과 일치시킬 것
+
+---
+# [풀이 2/2] Deployment (~/mariadb-deploy.yaml 수정 내용)
+# 아래는 volumes 섹션에서 claimName을 설정하는 핵심 부분만 발췌
+#
+# spec:
+#   template:
+#     spec:
+#       containers:
+#         - name: mariadb
+#           volumeMounts:
+#             - name: mysql-persistent-storage
+#               mountPath: /var/lib/mysql
+#       volumes:
+#         - name: mysql-persistent-storage
+#           persistentVolumeClaim:
+#             claimName: mariadb        # ← PVC 이름과 일치
