@@ -1,0 +1,74 @@
+# ============================================================
+# TASK:
+# Reconfigure the existing Deployment front-end in namespace
+# sp-culator to expose port 80/tcp of the existing container nginx.
+# Create a new Service named front-end-svc exposing the container
+# port 80/tcp.
+# Configure the new Service to also expose the individual pods
+# via NodePort.
+# ============================================================
+#
+# SOLUTION:
+#
+# 1. Deployment를 수정하여 containerPort 추가
+# kubectl edit deploy -n sp-culator front-end
+# ------------------------------------------
+#     spec:
+#       containers:
+#       - image: nginx:1.14.2
+#         imagePullPolicy: IfNotPresent
+#         name: nginx
+#         ports:                 // 추가
+#         - containerPort: 80    // 추가
+#
+# 2. Service 생성
+#
+# 3. 확인
+#    kubectl get -n sp-culator svc front-end-svc
+#
+# 4. 호출 테스트
+#    curl localhost:<nodePort>
+#
+# ============================================================
+
+# [세팅] Deployment (containerPort 미설정 상태로 가정 - 문제 풀이 대상)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-end
+  namespace: sp-culator
+  labels:
+    app: front-end
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: front-end
+  template:
+    metadata:
+      labels:
+        app: front-end
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          imagePullPolicy: IfNotPresent
+          # ports:                  # ← 풀이 1단계: 이 부분을 추가해야 함
+          #   - containerPort: 80
+
+---
+
+# [풀이] Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-end-svc
+  namespace: sp-culator      # 네임스페이스 꼭 추가하기
+spec:
+  type: NodePort
+  selector:
+    app: front-end          # ← Deployment 설정 확인 후 Pod 템플릿의 라벨과 반드시 일치해야 함
+  ports:
+    - port: 80
+      targetPort: 80
+      # nodePort: 30080      # 필요 시 특정 NodePort 지정 가능 (미지정 시 자동 할당)
