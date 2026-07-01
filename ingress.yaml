@@ -1,0 +1,48 @@
+# ============================================================
+# TASK:
+# Create a new Ingress resource "echo" in the "echo-sound" namespace.
+# - Expose Service "echoserver-service" on http://example.org/echo
+#   using Service port 8080.
+# - Check availability with:
+#   curl -o /dev/null -s -w "%{http_code}\n" http://example.org/echo
+#   (should return 200)
+#
+# ============================================================
+# SOLUTION STEPS:
+#
+# 1. IngressClass 이름 확인 (클러스터에 맞는 이름 사용)
+#    kubectl get ingressclass
+#
+# 2. 아래 Ingress 생성
+#
+# 3. 적용 확인
+#    kubectl get ingress -n echo-sound
+#    kubectl describe ingress echo -n echo-sound
+#
+# 4. 테스트
+#    curl -o /dev/null -s -w "%{http_code}\n" http://example.org/echo
+#
+# ------------------------------------------------------------
+# NOTE:
+# - kubectl get ingressclass 명령어로 ingressClassName 확인
+#   spce>rules host: example.org 추가
+# ============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo
+  namespace: echo-sound
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: example.org
+    http:
+      paths:
+      - path: /echo
+        pathType: Prefix
+        backend:
+          service:
+            name: echoserver-service
+            port:
+              number: 8080
